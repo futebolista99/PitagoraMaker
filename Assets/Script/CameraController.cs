@@ -19,7 +19,7 @@ public class CameraController : MonoBehaviour {
         viewCamera.enabled = false;
         enlargementButton.SetActive(false);
         reductionButton.SetActive(false);
-    buttonText.text = ("view\n画面");
+    buttonText.text = ("view");
 	}
 	
 	// Update is called once per frame
@@ -34,7 +34,7 @@ public class CameraController : MonoBehaviour {
             viewCamera.enabled = true;
             enlargementButton.SetActive(true);
             reductionButton.SetActive(true);
-            buttonText.text = ("main\n画面");
+            buttonText.text = ("main");
             status = 1;
         } else {
             trickGenerateButton.SetActive(true);
@@ -42,7 +42,7 @@ public class CameraController : MonoBehaviour {
             viewCamera.enabled = false;
             enlargementButton.SetActive(false);
             reductionButton.SetActive(false);
-            buttonText.text = ("view\n画面");
+            buttonText.text = ("view");
             status = 0;
         }
     }

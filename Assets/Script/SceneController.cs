@@ -12,7 +12,6 @@ public class SceneController : MonoBehaviour {
 
 
     void Update() {
-
         
     }
 

@@ -9,12 +9,11 @@ public class TrickGenerator : MonoBehaviour {
     int i;
     public static string status = "start";
     string direction = "frontStart";
-    float distance = 0;
-    float angle = 0;
+    float distance = 0.0f;
+    float angle = 0.0f;
+    float restartTimer = 0.0f;
     string moveDirection = "stay";
 
-    public GameObject restartButton;
-    float timer = 0.0f;
 
     public GameObject player;
     public Camera playerCamera;
@@ -22,7 +21,8 @@ public class TrickGenerator : MonoBehaviour {
     public static GameObject startSphere;
     public float reachableDistance = 100.0f;
     public GameObject blockPrefab;
-    public GameObject blockGray;
+    public GameObject playStartButton;
+    public GameObject restartButton;
     
     float blockWidth;
     public GameObject[] trickStart;
@@ -48,7 +48,12 @@ public class TrickGenerator : MonoBehaviour {
     Sprite[] spriteRight = new Sprite[5];
     Sprite[] spriteGoal = new Sprite[5];
 
+    private float finishTimer = 0.0f;
+    private bool finishSoundBool = false;
+    private bool playSoundBool = false;
     public AudioClip putSound;
+    public AudioClip playSound;
+    public AudioClip finishSound;
     private AudioSource audioSource;
 
     void Awake() {
@@ -74,11 +79,8 @@ public class TrickGenerator : MonoBehaviour {
     // Use this for initialization
     void Start() {
         blockWidth = blockPrefab.transform.localScale.x;
-        blockGrayRenderer = blockGray.GetComponent<Renderer>();
         chaseCamera.SetActive(false);
         image = this.gameObject.GetComponent<Image>();
-
-        restartButton.SetActive(false);
 
         // 最初に候補として表示される仕掛けはドミノのstartPrefab
         image.sprite = spriteStart[0];
@@ -91,13 +93,6 @@ public class TrickGenerator : MonoBehaviour {
     void Update() {
 
 
-        if (
-           GoalJudgeScript.playStatus == "finish") {
-            timer += Time.deltaTime;
-        }
-        if (timer >= 5.0f) {
-            restartButton.SetActive(true);
-        }
         
 
         // rayを飛ばして物が存在するかどうかを判断
@@ -110,65 +105,48 @@ public class TrickGenerator : MonoBehaviour {
         rayRight = playerCamera.ViewportPointToRay(new Vector3(0.7f, 0.5f, 0.0f));
         bool isRayhitRight = Physics.Raycast(rayRight, out hitInfoRight, reachableDistance);
         
-        // Show gray block
-        if (isRayhit && status != "play") {
-            blockGrayRenderer.enabled = true;
-            hitObjPos = hitInfo.collider.gameObject.transform.position;
-            blockGray.transform.position = hitObjPos + hitInfo.normal * blockWidth * 0.3f;
-        }
-        
 
         // Camera movement　moveDirectionがstartやfrontPositonなら前に進む、leftやrightも然り
         if(moveDirection == "start" || moveDirection == "front") {
-            blockGrayRenderer.enabled = false;
             player.transform.Translate(new Vector3(0, 0, 0.2f));
             distance += 0.2f;
         }
         if(distance >= 9.8f) {
-            blockGrayRenderer.enabled = true;
             distance = 0.0f;
             moveDirection = "stay";
         }
 
         if (moveDirection == "leftRotation") {
-            blockGrayRenderer.enabled = false;
             player.transform.Rotate(new Vector3(0, -2.0f, 0));
             angle += 2.0f;
         }
         if (angle >= 90.0f) {
-            blockGrayRenderer.enabled = true;
             angle = 0.0f;
             moveDirection = "leftPosition";
         }
 
         if(moveDirection == "leftPosition") {
-            blockGrayRenderer.enabled = false;
             player.transform.Translate(new Vector3(0, 0, 0.2f));
             distance += 0.2f;
         }
         if(distance >= 9.8f) {
-            blockGrayRenderer.enabled = true;
             distance = 0.0f;
             moveDirection = "stay";
         }
 
         if (moveDirection == "rightRotation") {
-            blockGrayRenderer.enabled = false;
             player.transform.Rotate(new Vector3(0, 2.0f, 0));
             angle += 2.0f;
         }
         if (angle >= 90.0f) {
-            blockGrayRenderer.enabled = true;
             angle = 0.0f;
             moveDirection = "rightPosition";
         }
         if (moveDirection == "rightPosition") {
-            blockGrayRenderer.enabled = false;
             player.transform.Translate(new Vector3(0, 0, 0.2f));
             distance += 0.2f;
         }
         if (distance >= 9.8f) {
-            blockGrayRenderer.enabled = true;
             distance = 0.0f;
             moveDirection = "stay";
         }
@@ -226,12 +204,35 @@ public class TrickGenerator : MonoBehaviour {
             }
         }
 
-        if (status == "goal") {
+        if(GoalJudgeScript.playStatus == "now" && playSoundBool == false) {
+            audioSource.clip = playSound;
+            audioSource.Play();
+            playSoundBool = true;
+        }
 
-            chaseCamera.SetActive(true);
-            playerCamera.enabled = false;
-            blockGrayRenderer.enabled = false;
-            status = "play";
+        if(GoalJudgeScript.playStatus == "finish" && playSoundBool == true) {
+            audioSource.Stop();
+            playSoundBool = false;
+        }
+
+        if(GoalJudgeScript.playStatus == "finish" && finishSoundBool == false) {
+            finishTimer += Time.deltaTime;
+            if (finishTimer >= 1.0f) {
+                audioSource.clip = finishSound;
+                audioSource.Play();
+                finishSoundBool = true;
+            }
+        }
+
+        if (status == "goal") {
+            playStartButton.SetActive(true);
+        }
+
+        if (GoalJudgeScript.playStatus == "finish") {
+            restartTimer += Time.deltaTime;
+        }
+        if (restartTimer >= 5.0f) {
+            restartButton.SetActive(true);
         }
     }
 
@@ -253,43 +254,41 @@ public class TrickGenerator : MonoBehaviour {
         }
 
         else if (status == "middle") {
-            if (hitInfo.collider.gameObject.name == "greenPrefab(Clone)" || hitInfo.collider.gameObject.name == "whitePrefab(Clone)") {
-                // Put blocks
-                if (trickLeft.Contains(blockPrefab)) {
-                    if (hitInfoLeft.collider.gameObject.name == "greenPrefab(Clone)" || hitInfoLeft.collider.gameObject.name == "whitePrefab(Clone)") {
-                        hitObjPos = hitInfo.collider.gameObject.transform.position;
-                        Instantiate(blockPrefab, hitObjPos + hitInfo.normal * blockWidth * 0.55f, player.transform.rotation);
-                        audioSource.clip = putSound;
-                        audioSource.Play();
-                        moveDirection = "leftRotation";
-                    }
-                }
-                if (trickFront.Contains(blockPrefab)) {
-                    if (hitInfoFront.collider.gameObject.name == "greenPrefab(Clone)" || hitInfoFront.collider.gameObject.name == "whitePrefab(Clone)") {
-                        hitObjPos = hitInfo.collider.gameObject.transform.position;
-                        Instantiate(blockPrefab, hitObjPos + hitInfo.normal * blockWidth * 0.55f, player.transform.rotation);
-                        audioSource.clip = putSound;
-                        audioSource.Play();
-                        moveDirection = "front";
-
-                    }
-                }
-                if (trickRight.Contains(blockPrefab)) {
-                    if (hitInfoRight.collider.gameObject.name == "greenPrefab(Clone)" || hitInfoRight.collider.gameObject.name == "whitePrefab(Clone)") {
-                        hitObjPos = hitInfo.collider.gameObject.transform.position;
-                        Instantiate(blockPrefab, hitObjPos + hitInfo.normal * blockWidth * 0.55f, player.transform.rotation);
-                        audioSource.clip = putSound;
-                        audioSource.Play();
-                        moveDirection = "rightRotation";
-                    }
-                }
-                if (trickGoal.Contains(blockPrefab)) {
+            // Put blocks
+            if (trickLeft.Contains(blockPrefab)) {
+                if (hitInfoLeft.collider.gameObject.name == "greenPrefab(Clone)" || hitInfoLeft.collider.gameObject.name == "whitePrefab(Clone)") {
                     hitObjPos = hitInfo.collider.gameObject.transform.position;
                     Instantiate(blockPrefab, hitObjPos + hitInfo.normal * blockWidth * 0.55f, player.transform.rotation);
                     audioSource.clip = putSound;
                     audioSource.Play();
-                    status = "goal"; 
+                    moveDirection = "leftRotation";
                 }
+            }
+            if (trickFront.Contains(blockPrefab)) {
+                if (hitInfoFront.collider.gameObject.name == "greenPrefab(Clone)" || hitInfoFront.collider.gameObject.name == "whitePrefab(Clone)") {
+                    hitObjPos = hitInfo.collider.gameObject.transform.position;
+                    Instantiate(blockPrefab, hitObjPos + hitInfo.normal * blockWidth * 0.55f, player.transform.rotation);
+                    audioSource.clip = putSound;
+                    audioSource.Play();
+                    moveDirection = "front";
+
+                }
+            }
+            if (trickRight.Contains(blockPrefab)) {
+                if (hitInfoRight.collider.gameObject.name == "greenPrefab(Clone)" || hitInfoRight.collider.gameObject.name == "whitePrefab(Clone)") {
+                    hitObjPos = hitInfo.collider.gameObject.transform.position;
+                    Instantiate(blockPrefab, hitObjPos + hitInfo.normal * blockWidth * 0.55f, player.transform.rotation);
+                    audioSource.clip = putSound;
+                    audioSource.Play();
+                    moveDirection = "rightRotation";
+                }
+            }
+            if (trickGoal.Contains(blockPrefab)) {
+                hitObjPos = hitInfo.collider.gameObject.transform.position;
+                Instantiate(blockPrefab, hitObjPos + hitInfo.normal * blockWidth * 0.55f, player.transform.rotation);
+                audioSource.clip = putSound;
+                audioSource.Play();
+                status = "goal";
             }
         }
     }

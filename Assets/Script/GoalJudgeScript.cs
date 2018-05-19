@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class GoalJudgeScript : MonoBehaviour {
     
-    public static string playStatus = "now";
+    public static string playStatus;
 
 	// Use this for initialization
 	void Start () {

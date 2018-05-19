@@ -620,7 +620,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: start!
+  m_Text: play!
 --- !u!222 &1610286266
 CanvasRenderer:
   m_ObjectHideFlags: 0
